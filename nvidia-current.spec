@@ -189,23 +189,23 @@ cp -a kernel kernel-rc-server
 %endif
 
 cd kernel
-make SYSSRC=%{_prefix}/src/linux-%{kdir} CC=%{_bindir}/gcc
+%make_build SYSSRC=%{_prefix}/src/linux-%{kdir} CC=%{_bindir}/gcc
 
 cd ../kernel-clang
-make SYSSRC=%{_prefix}/src/linux-%{ckdir} CC=%{_bindir}/clang IGNORE_CC_MISMATCH=1
+%make_build SYSSRC=%{_prefix}/src/linux-%{ckdir} CC=%{_bindir}/clang IGNORE_CC_MISMATCH=1 LLVM=1
 
 cd ../kernel-server
-make SYSSRC=%{_prefix}/src/linux-%{skdir} CC=%{_bindir}/gcc
+%make_build SYSSRC=%{_prefix}/src/linux-%{skdir} CC=%{_bindir}/gcc
 
 cd ../kernel-server-clang
-make SYSSRC=%{_prefix}/src/linux-%{cskdir} CC=%{_bindir}/clang IGNORE_CC_MISMATCH=1
+%make_build SYSSRC=%{_prefix}/src/linux-%{cskdir} CC=%{_bindir}/clang IGNORE_CC_MISMATCH=1 LLVM=1
 
 %if %{with kernel_rc}
 cd ../kernel-rc
-make SYSSRC=%{_prefix}/src/linux-%{rkdir} CC=%{_bindir}/gcc IGNORE_CC_MISMATCH=1
+%make_build SYSSRC=%{_prefix}/src/linux-%{rkdir} CC=%{_bindir}/gcc IGNORE_CC_MISMATCH=1
 
 cd ../kernel-rc-server
-make SYSSRC=%{_prefix}/src/linux-%{rskdir} CC=%{_bindir}/gcc IGNORE_CC_MISMATCH=1
+%make_build SYSSRC=%{_prefix}/src/linux-%{rskdir} CC=%{_bindir}/gcc IGNORE_CC_MISMATCH=1
 %endif
 
 %install
@@ -260,6 +260,8 @@ instx %{_libdir}/libEGL_nvidia.so.%{version}
 sl EGL_nvidia 0
 instx %{_libdir}/libnvidia-eglcore.so.%{version}
 sl nvidia-eglcore
+instx %{_libdir}/libnvidia-egl-gbm.so.1.1.0
+instx %{_libdir}/libnvidia-egl-wayland.so.1.1.9
 
 # OpenGL ES
 instx %{_libdir}/libGLESv1_CM_nvidia.so.%{version}
@@ -293,8 +295,17 @@ inst %{_sysconfdir}/OpenCL/vendors/nvidia.icd
 instx %{_libdir}/libnvidia-cfg.so.%{version}
 sl nvidia-cfg 1
 
-instx %{_libdir}/libnvidia-compiler.so.%{version}
+instx %{_libdir}/libnvidia-allocator.so.%{version}
+instx %{_libdir}/libnvidia-rtcore.so.%{version}
+instx %{_libdir}/libnvidia-nvvm.so.4.0.0
+instx %{_libdir}/libnvidia-opticalflow.so.%{version}
+
+# Currently only exists on x86
+[ -e "libnvidia-compiler.so.%{version}" ] && instx %{_libdir}/libnvidia-compiler.so.%{version}
+[ -e "libnvidia-compiler-next.so.%{version}" ] && instx %{_libdir}/libnvidia-compiler-next.so.%{version}
 instx %{_libdir}/libnvidia-opencl.so.%{version}
+
+instx %{_libdir}/libnvidia-ngx.so.%{version}
 
 # Encode (what is this?)
 instx %{_libdir}/libnvidia-encode.so.%{version}
@@ -306,7 +317,7 @@ sl nvidia-fbc 1
 
 # Yuck...
 instx %{_libdir}/libnvidia-gtk2.so.%{version}
-instx %{_libdir}/libnvidia-gtk3.so.%{version}
+[ -e "libnvidia-gtk3.so.%{version}" ] && instx %{_libdir}/libnvidia-gtk3.so.%{version}
 
 # IFR
 #instx %{_libdir}/libnvidia-ifr.so.%{version}
@@ -323,13 +334,16 @@ for i in *.1.gz; do
 	gunzip $i
 done
 instx %{_bindir}/nvidia-bug-report.sh
-instx %{_bindir}/nvidia-smi
-inst %{_mandir}/man1/nvidia-smi.1
-instx %{_bindir}/nvidia-settings       
-inst %{_mandir}/man1/nvidia-settings.1
+for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-debugdump nvidia-persistenced nvidia-powerd nvidia-modprobe nvidia-smi nvidia-settings; do
+	[ -e $i ] && instx %{_bindir}/$i
+	[ -e $i.1 ] && inst %{_mandir}/man1/$i.1
+done
 
 # glvk
 instx %{_libdir}/libnvidia-glvkspirv.so.%{version}
+
+instx %{_libdir}/libnvidia-vulkan-producer.so.%{version}
+instx %{_libdir}/libnvoptix.so.%{version}
 
 # Assorted stuff
 inst %{_datadir}/nvidia/nvidia-application-profiles-%{version}-rc
@@ -373,6 +387,8 @@ inst /lib/modules/%{cskdir}/kernel/drivers/video/nvidia-uvm.ko
 %{_libdir}/libGLX_nvidia.so*
 %{_libdir}/libEGL_nvidia.so*
 %{_libdir}/libnvidia-eglcore.so*
+%{_libdir}/libnvidia-egl-gbm.so*
+%{_libdir}/libnvidia-egl-wayland.so*
 %{_libdir}/libGLESv1_CM_nvidia.so*
 %{_libdir}/libGLESv2_nvidia.so*
 %{_libdir}/libnvidia-glsi.so*
@@ -383,18 +399,39 @@ inst /lib/modules/%{cskdir}/kernel/drivers/video/nvidia-uvm.ko
 #%%{_libdir}/libnvidia-fatbinaryloader.so*
 %{_libdir}/libnvidia-tls.so*
 %{_sysconfdir}/OpenCL/vendors/nvidia.icd
+%{_libdir}/libnvidia-allocator.so*
+%{_libdir}/libnvidia-rtcore.so*
+%{_libdir}/libnvidia-nvvm.so*
+%{_libdir}/libnvidia-ngx.so*
+%{_libdir}/libnvidia-opticalflow.so*
 %{_libdir}/libnvidia-cfg.so*
+%ifarch %{x86_64}
 %{_libdir}/libnvidia-compiler.so*
+%{_libdir}/libnvidia-compiler-next.so*
+%endif
 %{_libdir}/libnvidia-opencl.so*
 %{_libdir}/libnvidia-encode.so*
 %{_libdir}/libnvidia-fbc.so*
 %{_libdir}/libnvidia-gtk2.so*
+%ifarch %{x86_64}
 %{_libdir}/libnvidia-gtk3.so*
+%endif
 #{_libdir}/libnvidia-ifr.so*
 %{_libdir}/vdpau/libvdpau_nvidia.so*
 %{_bindir}/nvidia-bug-report.sh
 %{_bindir}/nvidia-smi
 %{_mandir}/man1/nvidia-smi.1*
+%{_bindir}/nvidia-cuda-mps-control
+%{_mandir}/man1/nvidia-cuda-mps-control.1*
+%{_bindir}/nvidia-cuda-mps-server
+%{_bindir}/nvidia-debugdump
+%{_bindir}/nvidia-persistenced
+%{_mandir}/man1/nvidia-persistenced.1*
+%ifarch %{x86_64}
+%{_bindir}/nvidia-powerd
+%endif
+%{_bindir}/nvidia-modprobe
+%{_mandir}/man1/nvidia-modprobe.1*
 %{_bindir}/nvidia-settings
 %{_mandir}/man1/nvidia-settings.1*
 %{_libdir}/libnvidia-glvkspirv.so*
@@ -402,6 +439,8 @@ inst /lib/modules/%{cskdir}/kernel/drivers/video/nvidia-uvm.ko
 %{_datadir}/nvidia/nvidia-application-profiles-%{version}-key-documentation
 %{_sysconfdir}/X11/xorg.conf.d/15-nvidia.conf
 %{_sysconfdir}/modprobe.d/nvidia.conf
+%{_libdir}/libnvidia-vulkan-producer.so*
+%{_libdir}/libnvoptix.so*
 
 %ifarch %{x86_64}
 %files 32bit
@@ -414,12 +453,16 @@ inst /lib/modules/%{cskdir}/kernel/drivers/video/nvidia-uvm.ko
 %{_prefix}/lib/libnvidia-glsi.so*
 %{_prefix}/lib/libcuda.so*
 %{_prefix}/lib/libnvcuvid.so*
+%{_prefix}/lib/libnvidia-allocator.so*
 %{_prefix}/lib/libnvidia-ml.so*
 %{_prefix}/lib/libnvidia-ptxjitcompiler.so*
 #%%{_prefix}/lib/libnvidia-fatbinaryloader.so*
 %{_prefix}/lib/libnvidia-tls.so*
+%ifarch %{x86_64}
 %{_prefix}/lib/libnvidia-compiler.so*
+%endif
 %{_prefix}/lib/libnvidia-opencl.so*
+%{_prefix}/lib/libnvidia-opticalflow.so*
 %{_prefix}/lib/libnvidia-encode.so*
 %{_prefix}/lib/libnvidia-fbc.so*
 #{_prefix}/lib/libnvidia-ifr.so*
