@@ -261,7 +261,6 @@ sl EGL_nvidia 0
 instx %{_libdir}/libnvidia-eglcore.so.%{version}
 sl nvidia-eglcore
 instx %{_libdir}/libnvidia-egl-gbm.so.1.1.0
-instx %{_libdir}/libnvidia-egl-wayland.so.1.1.9
 
 # OpenGL ES
 instx %{_libdir}/libGLESv1_CM_nvidia.so.%{version}
@@ -388,7 +387,6 @@ inst /lib/modules/%{cskdir}/kernel/drivers/video/nvidia-uvm.ko
 %{_libdir}/libEGL_nvidia.so*
 %{_libdir}/libnvidia-eglcore.so*
 %{_libdir}/libnvidia-egl-gbm.so*
-%{_libdir}/libnvidia-egl-wayland.so*
 %{_libdir}/libGLESv1_CM_nvidia.so*
 %{_libdir}/libGLESv2_nvidia.so*
 %{_libdir}/libnvidia-glsi.so*
